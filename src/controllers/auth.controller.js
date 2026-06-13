@@ -8,15 +8,17 @@ export const login = async (req, res) => {
 
     // Buscar usuario
     const result = await pool.query(
-      `SELECT id, nombre, correo, rol, password_hash
+      `SELECT id, nombres, apellidos, correo, celular, rol, activo, password_hash
        FROM usuarios
        WHERE correo = $1`,
       [correo],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: "Usuario no existe",
+      return res.status(401).json({
+        success: false,
+        message: "Credenciales inválidas",
+        data: null,
       });
     }
 
@@ -24,7 +26,9 @@ export const login = async (req, res) => {
 
     if (!user.activo) {
       return res.status(403).json({
+        success: false,
         message: "Usuario inactivo. Contacte con el administrador.",
+        data: null,
       });
     }
 
@@ -33,38 +37,44 @@ export const login = async (req, res) => {
 
     if (!validPassword) {
       return res.status(401).json({
-        message: "Contraseña incorrecta",
+        success: false,
+        message: "Credenciales inválidas",
+        data: null,
       });
     }
 
     // Crear JWT
     const token = generateToken({
       id: user.id,
-      nombre: user.nombre,
-      correo: user.correo,
       rol: user.rol,
     });
 
     // Enviar cookie
     res.cookie("access_token", token, {
       httpOnly: true,
-      secure: false, // true en producción con HTTPS
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 2 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
+      success: true,
       message: "Login exitoso",
-      usuario: {
+      data: {
         id: user.id,
-        nombre: user.nombre,
+        nombres: user.nombres,
+        apellidos: user.apellidos,
         correo: user.correo,
+        celular: user.celular,
         rol: user.rol,
+        activo: user.activo,
       },
     });
   } catch (error) {
     return res.status(500).json({
-      error: error.message,
+      success: false,
+      message: "Error interno del servidor",
+      data: null,
     });
   }
 };
