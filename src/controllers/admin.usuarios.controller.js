@@ -20,7 +20,7 @@ export const getAdminUsuarios = async (req, res) => {
         s.estado_disponibilidad,
         s.ultima_actualizacion_gps
       FROM usuarios u
-      LEFT JOIN serenos s ON u.id = s.usuario_id
+      LEFT JOIN serenos s ON u.id = s.id_usuario
       WHERE 1=1
     `;
 
@@ -123,16 +123,16 @@ export const createAdminUsuario = async (req, res) => {
       [nombres, apellidos, celular, correo, rol, passwordHash],
     );
 
-    const usuario_id = userResult.rows[0].id;
+    const id_usuario = userResult.rows[0].id;
 
     // Si es SERENO, insertar en tabla serenos
     if (rol === "SERENO") {
       await client.query(
         `
-        INSERT INTO serenos (usuario_id, estado_disponibilidad)
+        INSERT INTO serenos (id_usuario, estado_disponibilidad)
         VALUES ($1, 'DISPONIBLE')
         `,
-        [usuario_id],
+        [id_usuario],
       );
     }
 
@@ -143,7 +143,7 @@ export const createAdminUsuario = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      usuario_id: usuario_id,
+      id_usuario: id_usuario,
       rol: rol,
       credenciales_enviadas_a: correo,
     });
@@ -203,7 +203,7 @@ export const updateAdminUsuario = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      usuario_id: parseInt(id),
+      id_usuario: parseInt(id),
     });
   } catch (error) {
     return res.status(500).json({
