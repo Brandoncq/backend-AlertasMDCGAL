@@ -57,7 +57,7 @@ export const login = async (req, res) => {
       maxAge: 2 * 60 * 60 * 1000,
     });
 
-    return res.status(200).json({
+    /*return res.status(200).json({
       success: true,
       message: "Login exitoso",
       data: {
@@ -69,6 +69,12 @@ export const login = async (req, res) => {
         rol: user.rol,
         activo: user.activo,
       },
+    });*/
+    return res.cookie("access_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 2 * 60 * 60 * 1000,
     });
   } catch (error) {
     return res.status(500).json({
