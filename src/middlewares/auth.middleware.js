@@ -1,17 +1,26 @@
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
-export const authMiddleware = (req, res, next) => {
-  const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+export const authMiddleware = async (req, res, next) => {
+  const token =
+    req.cookies?.access_token || req.headers.authorization?.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "No autenticado" });
+    return res.status(401).json({
+      message: "No autenticado",
+    });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+    const { payload } = await jwtVerify(token, secret);
+
+    req.user = payload;
+
     next();
-  } catch (err) {
-    return res.status(401).json({ message: "Token inválido" });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Token inválido",
+    });
   }
 };
