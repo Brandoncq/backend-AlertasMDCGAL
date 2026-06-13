@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
+import authRoutes from "./routes/auth.routes.js";
 import alertasRoutes from "./routes/alertas.routes.js";
 import serenosRoutes from "./routes/serenos.routes.js";
 import asignacionesRoutes from "./routes/asignaciones.routes.js";
