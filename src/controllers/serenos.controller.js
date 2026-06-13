@@ -29,7 +29,7 @@ export const getSerenos = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -91,7 +91,7 @@ export const createSereno = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   } finally {
@@ -153,7 +153,7 @@ export const updateSereno = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   } finally {
@@ -183,7 +183,7 @@ export const deleteSereno = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }

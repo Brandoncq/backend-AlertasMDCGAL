@@ -57,19 +57,6 @@ export const login = async (req, res) => {
       maxAge: 2 * 60 * 60 * 1000,
     });
 
-    /*return res.status(200).json({
-      success: true,
-      message: "Login exitoso",
-      data: {
-        id: user.id,
-        nombres: user.nombres,
-        apellidos: user.apellidos,
-        correo: user.correo,
-        celular: user.celular,
-        rol: user.rol,
-        activo: user.activo,
-      },
-    });*/
     return res
       .cookie("access_token", token, {
         httpOnly: true,
@@ -94,7 +81,7 @@ export const login = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }

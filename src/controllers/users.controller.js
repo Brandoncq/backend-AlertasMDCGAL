@@ -17,7 +17,7 @@ export const getUsers = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -54,7 +54,7 @@ export const createUser = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -88,7 +88,7 @@ export const updateUser = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -119,7 +119,7 @@ export const updatePassword = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -147,7 +147,7 @@ export const deleteUser = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }

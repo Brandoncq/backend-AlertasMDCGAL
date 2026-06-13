@@ -32,7 +32,7 @@ export const getCitizens = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
@@ -103,7 +103,7 @@ export const createCitizen = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   } finally {
@@ -171,7 +171,7 @@ export const updateCitizen = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   } finally {
@@ -201,7 +201,7 @@ export const deleteCitizen = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
       data: null,
     });
   }
