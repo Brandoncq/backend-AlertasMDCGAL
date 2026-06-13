@@ -5,7 +5,7 @@ import {
   createCitizen,
   updateCitizen,
   deleteCitizen,
-} from "../controllers/citizen.controller.js";
+} from "../controllers/citizens.controller.js";
 
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 

@@ -70,12 +70,27 @@ export const login = async (req, res) => {
         activo: user.activo,
       },
     });*/
-    return res.cookie("access_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 2 * 60 * 60 * 1000,
-    });
+    return res
+      .cookie("access_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 2 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        success: true,
+        message: "Login exitoso",
+        data: {
+          id: user.id,
+          nombres: user.nombres,
+          apellidos: user.apellidos,
+          correo: user.correo,
+          celular: user.celular,
+          rol: user.rol,
+          activo: user.activo,
+        },
+      });
   } catch (error) {
     return res.status(500).json({
       success: false,

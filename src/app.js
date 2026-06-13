@@ -5,7 +5,8 @@ import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/users.routes.js";
-import citizenRoutes from "./routes/users.routes.js";
+import citizenRoutes from "./routes/citizens.routes.js";
+import serenoRoutes from "./routes/serenos.routes.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/auth", authRoutes);
 // 🔒 RUTAS PROTEGIDAS
 app.use("/users", userRoutes);
 app.use("/citizens", citizenRoutes);
+app.use("/serenos", serenoRoutes);
 
 const PORT = process.env.PORT || 3000;
 
