@@ -53,7 +53,6 @@ export const createCitizen = async (req, res) => {
       dni,
       fecha_vencimiento_dni,
       direccion,
-      ubigeo,
     } = req.body;
 
     // Contraseña inicial = celular
@@ -85,12 +84,11 @@ export const createCitizen = async (req, res) => {
         id_usuario,
         dni,
         fecha_vencimiento_dni,
-        direccion,
-        ubigeo
+        direccion
       )
       VALUES ($1,$2,$3,$4,$5)
       `,
-      [idUsuario, dni, fecha_vencimiento_dni, direccion, ubigeo],
+      [idUsuario, dni, fecha_vencimiento_dni, direccion],
     );
 
     await client.query("COMMIT");
