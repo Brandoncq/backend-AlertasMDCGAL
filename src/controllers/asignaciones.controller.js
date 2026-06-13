@@ -27,7 +27,7 @@ export const crearAsignacion = async (req, res) => {
     const asignacionResult = await client.query(
       `
       INSERT INTO asignaciones_sereno (
-        alerta_id, sereno_id, asignado_por, estado_asignacion,
+        alerta_id, sereno_id, operador_id, estado,
         distancia_estimada_mts, tiempo_estimado_llegada_min
       )
       VALUES ($1, $2, $3, 'PENDIENTE_CONFIRMACION', $4, $5)
@@ -58,7 +58,7 @@ export const crearAsignacion = async (req, res) => {
     await client.query(
       `
       UPDATE serenos
-      SET estado_disponibilidad = 'OCUPADO', updated_at = NOW()
+      SET estado_disponibilidad = 'OCUPADO', ultima_actualizacion_gps = NOW()
       WHERE usuario_id = $1
       `,
       [sereno_id],
@@ -67,8 +67,8 @@ export const crearAsignacion = async (req, res) => {
     // 4. Insertar en historial_alertas
     await client.query(
       `
-      INSERT INTO historial_alertas (alerta_id, estado, actor, actor_id)
-      VALUES ($1, 'ASIGNADO', 'OPERADOR', $2)
+      INSERT INTO historial_alertas (alerta_id, estado, actor_id)
+      VALUES ($1, 'ASIGNADO', $2)
       `,
       [alerta_id, operador_id],
     );

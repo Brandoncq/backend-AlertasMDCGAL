@@ -3,14 +3,13 @@ import pool from "../config/db.js";
 // GET /api/alertas/activas
 export const getAlertasActivas = async (req, res) => {
   try {
-    const result = await pool.query(
-      `
-      SELECT 
-        id, 
-        ciudadano_id, 
+    const result = await pool.query(`
+      SELECT
+        id,
+        ciudadano_id,
         estado_actual,
-        ST_Y(ubicacion_incidencia::geometry) as lat,
-        ST_X(ubicacion_incidencia::geometry) as lng,
+        ST_Y(ubicacion_incidencia::geometry) AS lat,
+        ST_X(ubicacion_incidencia::geometry) AS lng,
         direccion_aproximada,
         descripcion,
         created_at,
@@ -18,10 +17,8 @@ export const getAlertasActivas = async (req, res) => {
       FROM alertas
       WHERE estado_actual IN ('PENDIENTE', 'ASIGNADO', 'DESPLIEGUE')
       ORDER BY created_at DESC
-      `,
-    );
+    `);
 
-    // Formatear respuesta con objeto ubicacion
     const alertas = result.rows.map((row) => ({
       id: row.id,
       ciudadano_id: row.ciudadano_id,
@@ -40,7 +37,7 @@ export const getAlertasActivas = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      message: error?.message || "Error interno del servidor",
       data: null,
     });
   }
@@ -51,14 +48,14 @@ export const getDetalleAlerta = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Obtener datos de la alerta
+    // 1. Datos de la alerta
     const alertaResult = await pool.query(
       `
-      SELECT 
+      SELECT
         id,
         estado_actual,
-        ST_Y(ubicacion_incidencia::geometry) as lat,
-        ST_X(ubicacion_incidencia::geometry) as lng,
+        ST_Y(ubicacion_incidencia::geometry) AS lat,
+        ST_X(ubicacion_incidencia::geometry) AS lng,
         direccion_aproximada,
         descripcion,
         created_at,
@@ -79,22 +76,24 @@ export const getDetalleAlerta = async (req, res) => {
 
     const alerta = alertaResult.rows[0];
 
-    // 2. Obtener datos del ciudadano y contactos de referencia
+    // 2. Ciudadano
     const ciudadanoResult = await pool.query(
       `
-      SELECT 
+      SELECT
         u.nombres,
         u.apellidos,
         u.celular
       FROM usuarios u
-      WHERE u.id = $1 AND u.rol = 'CIUDADANO'
+      WHERE u.id = $1
+      AND u.rol = 'CIUDADANO'
       `,
       [alerta.ciudadano_id],
     );
 
+    // 3. Contactos de referencia
     const contactosResult = await pool.query(
       `
-      SELECT 
+      SELECT
         nombre_referencia,
         celular,
         tipo_relacion
@@ -104,15 +103,16 @@ export const getDetalleAlerta = async (req, res) => {
       [alerta.ciudadano_id],
     );
 
-    // 3. Obtener formulario del ciudadano (EAV)
+    // 4. Formulario
     const formularioResult = await pool.query(
       `
-      SELECT 
+      SELECT
         rf.formulario_id,
         fc.titulo,
-        rf.respuestas
+        rf.respuestas_jsonb
       FROM respuestas_formulario rf
-      JOIN formularios_config fc ON rf.formulario_id = fc.id
+      INNER JOIN formularios_config fc
+        ON rf.formulario_id = fc.id
       WHERE rf.alerta_id = $1
       `,
       [id],
@@ -121,7 +121,6 @@ export const getDetalleAlerta = async (req, res) => {
     const ciudadano = ciudadanoResult.rows[0];
     const formulario = formularioResult.rows[0];
 
-    // 4. Construir respuesta
     const response = {
       id: parseInt(id),
       estado_actual: alerta.estado_actual,
@@ -132,6 +131,7 @@ export const getDetalleAlerta = async (req, res) => {
       direccion_aproximada: alerta.direccion_aproximada,
       descripcion: alerta.descripcion,
       created_at: alerta.created_at,
+
       ciudadano_contacto: {
         nombre_completo:
           `${ciudadano?.nombres || ""} ${ciudadano?.apellidos || ""}`.trim(),
@@ -142,11 +142,12 @@ export const getDetalleAlerta = async (req, res) => {
           tipo_relacion: c.tipo_relacion,
         })),
       },
+
       formulario_ciudadano: formulario
         ? {
             formulario_id: formulario.formulario_id,
             titulo: formulario.titulo,
-            respuestas: formulario.respuestas,
+            respuestas: formulario.respuestas_jsonb,
           }
         : null,
     };
@@ -155,7 +156,7 @@ export const getDetalleAlerta = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      message: error?.message || "Error interno del servidor",
       data: null,
     });
   }
@@ -168,18 +169,24 @@ export const rechazarAlerta = async (req, res) => {
   try {
     const { id } = req.params;
     const { categoria_rechazo, motivo_detalle } = req.body;
-    const operador_id = req.user?.id || 1; // Temporal, viene del JWT
+    const operador_id = req.user?.id || 1;
 
     await client.query("BEGIN");
 
-    // 1. Obtener ciudadano_id de la alerta
+    // Obtener alerta
     const alertaResult = await client.query(
-      `SELECT ciudadano_id, estado_actual FROM alertas WHERE id = $1 FOR UPDATE`,
+      `
+      SELECT ciudadano_id, estado_actual
+      FROM alertas
+      WHERE id = $1
+      FOR UPDATE
+      `,
       [id],
     );
 
     if (alertaResult.rows.length === 0) {
       await client.query("ROLLBACK");
+
       return res.status(404).json({
         success: false,
         message: "Alerta no encontrada",
@@ -189,50 +196,63 @@ export const rechazarAlerta = async (req, res) => {
 
     const ciudadano_id = alertaResult.rows[0].ciudadano_id;
 
-    // 2. Cambiar estado de alerta a RECHAZADO
+    // Actualizar estado
     await client.query(
       `
-      UPDATE alertas 
-      SET estado_actual = 'RECHAZADO', updated_at = NOW()
+      UPDATE alertas
+      SET estado_actual = 'RECHAZADO',
+          updated_at = NOW()
       WHERE id = $1
       `,
       [id],
     );
 
-    // 3. Insertar registro en rechazos_alerta
+    // Registrar rechazo
     await client.query(
       `
-      INSERT INTO rechazos_alerta (alerta_id, rechazado_por, categoria, motivo_detalle)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO rechazos_alerta
+      (
+        alerta_id,
+        ciudadano_id,
+        operador_id,
+        categoria_rechazo,
+        motivo_detalle
+      )
+      VALUES ($1, $2, $3, $4, $5)
       `,
-      [id, operador_id, categoria_rechazo, motivo_detalle],
+      [id, ciudadano_id, operador_id, categoria_rechazo, motivo_detalle],
     );
 
-    // 4. Insertar en historial_alertas
+    // Historial
     await client.query(
       `
-      INSERT INTO historial_alertas (alerta_id, estado, actor, actor_id)
-      VALUES ($1, 'RECHAZADO', 'OPERADOR', $2)
+      INSERT INTO historial_alertas
+      (
+        alerta_id,
+        estado,
+        actor_id
+      )
+      VALUES ($1, 'RECHAZADO', $2)
       `,
       [id, operador_id],
     );
 
-    // 5. Incrementar contador_rechazos del ciudadano
+    // Incrementar rechazos
     const ciudadanoUpdate = await client.query(
       `
       UPDATE ciudadanos
-      SET contador_rechazos = contador_rechazos + 1,
-          updated_at = NOW()
-      WHERE id = $1
+      SET contador_rechazos = contador_rechazos + 1
+      WHERE id_usuario = $1
       RETURNING contador_rechazos, bloqueado_hasta
       `,
       [ciudadano_id],
     );
 
     const contador_nuevo = ciudadanoUpdate.rows[0]?.contador_rechazos || 0;
+
     let bloqueado_hasta = null;
 
-    // 6. Si llega a 3, bloquear
+    // Bloqueo por 30 días
     if (contador_nuevo >= 3) {
       bloqueado_hasta = new Date();
       bloqueado_hasta.setDate(bloqueado_hasta.getDate() + 30);
@@ -241,7 +261,7 @@ export const rechazarAlerta = async (req, res) => {
         `
         UPDATE ciudadanos
         SET bloqueado_hasta = $1
-        WHERE id = $2
+        WHERE id_usuario = $2
         `,
         [bloqueado_hasta, ciudadano_id],
       );
@@ -253,9 +273,9 @@ export const rechazarAlerta = async (req, res) => {
       success: true,
       nuevo_estado: "RECHAZADO",
       penalizacion_aplicada: {
-        ciudadano_id: ciudadano_id,
+        ciudadano_id,
         contador_rechazos_nuevo: contador_nuevo,
-        bloqueado_hasta: bloqueado_hasta,
+        bloqueado_hasta,
         mensaje:
           contador_nuevo >= 3
             ? "Ciudadano bloqueado por 30 días"
@@ -264,9 +284,10 @@ export const rechazarAlerta = async (req, res) => {
     });
   } catch (error) {
     await client.query("ROLLBACK");
+
     return res.status(500).json({
       success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      message: error?.message || "Error interno del servidor",
       data: null,
     });
   } finally {

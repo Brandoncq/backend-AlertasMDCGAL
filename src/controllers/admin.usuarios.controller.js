@@ -6,7 +6,11 @@ export const getAdminUsuarios = async (req, res) => {
   try {
     const { rol, activo, page = 1, limit = 20 } = req.query;
 
-    const offset = (page - 1) * limit;
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+
+    const offset = (pageNumber - 1) * limitNumber;
+
     let query = `
       SELECT 
         u.id,
@@ -47,7 +51,7 @@ export const getAdminUsuarios = async (req, res) => {
 
     // Add pagination
     query += ` ORDER BY u.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    queryParams.push(limit, offset);
+    queryParams.push(limitNumber, offset);
 
     const result = await pool.query(query, queryParams);
 
@@ -200,7 +204,13 @@ export const updateAdminUsuario = async (req, res) => {
       `,
       queryParams,
     );
-
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+        data: null,
+      });
+    }
     return res.status(200).json({
       success: true,
       id_usuario: parseInt(id),

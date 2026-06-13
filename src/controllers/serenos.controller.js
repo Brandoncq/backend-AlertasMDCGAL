@@ -3,23 +3,21 @@ import pool from "../config/db.js";
 // GET /api/serenos/disponibles
 export const getSerenosDisponibles = async (req, res) => {
   try {
-    const result = await pool.query(
-      `
+    const result = await pool.query(`
       SELECT 
-        u.id as id_usuario,
+        u.id AS id_usuario,
         u.nombres,
         u.apellidos,
         s.estado_disponibilidad,
-        ST_Y(s.ubicacion_actual::geometry) as lat,
-        ST_X(s.ubicacion_actual::geometry) as lng,
+        ST_Y(s.ubicacion_actual::geometry) AS lat,
+        ST_X(s.ubicacion_actual::geometry) AS lng,
         s.ultima_actualizacion_gps
       FROM serenos s
-      JOIN usuarios u ON s.usuario_id = u.id
+      JOIN usuarios u ON s.id_usuario = u.id
       WHERE s.estado_disponibilidad = 'DISPONIBLE'
         AND u.activo = true
       ORDER BY u.nombres ASC
-      `,
-    );
+    `);
 
     const serenos = result.rows.map((row) => ({
       id_usuario: row.id_usuario,
@@ -37,13 +35,12 @@ export const getSerenosDisponibles = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      message: error?.message || "Error interno del servidor",
       data: null,
     });
   }
 };
 
-// GET /api/serenos/cercanos
 export const getSerenosCercanos = async (req, res) => {
   try {
     const { lat, lng, limit = 5 } = req.query;
@@ -56,23 +53,21 @@ export const getSerenosCercanos = async (req, res) => {
       });
     }
 
-    // Consulta con PostGIS para distancia geográfica (en metros)
-    // NOTA: Para OSRM real, esto debería llamar a un servicio externo
     const result = await pool.query(
       `
       SELECT 
-        u.id as id_usuario,
+        u.id AS id_usuario,
         u.nombres,
         u.apellidos,
         s.estado_disponibilidad,
-        ST_Y(s.ubicacion_actual::geometry) as lat_sereno,
-        ST_X(s.ubicacion_actual::geometry) as lng_sereno,
+        ST_Y(s.ubicacion_actual::geometry) AS lat_sereno,
+        ST_X(s.ubicacion_actual::geometry) AS lng_sereno,
         ST_DistanceSphere(
           s.ubicacion_actual, 
           ST_SetSRID(ST_MakePoint($1, $2), 4326)
-        ) as distancia_mts
+        ) AS distancia_mts
       FROM serenos s
-      JOIN usuarios u ON s.usuario_id = u.id
+      JOIN usuarios u ON s.id_usuario = u.id
       WHERE s.estado_disponibilidad = 'DISPONIBLE'
         AND u.activo = true
       ORDER BY distancia_mts ASC
@@ -81,7 +76,6 @@ export const getSerenosCercanos = async (req, res) => {
       [lng, lat, limit],
     );
 
-    // Calcular tiempo estimado (asumiendo velocidad promedio 20 km/h = 333 m/min)
     const serenos = result.rows.map((row) => ({
       id_usuario: row.id_usuario,
       nombres: row.nombres,
@@ -102,7 +96,7 @@ export const getSerenosCercanos = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      message: error?.message || "Error interno del servidor",
       data: null,
     });
   }
