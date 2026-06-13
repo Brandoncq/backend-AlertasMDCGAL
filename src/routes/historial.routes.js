@@ -1,8 +1,8 @@
 import express from "express";
 import {
-  getSerenosDisponibles,
-  getSerenosCercanos,
-} from "../controllers/serenos.controller.js";
+  getHistorial,
+  getDetalleCaso,
+} from "../controllers/historial.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -10,10 +10,10 @@ const router = express.Router();
 // Proteger todas las rutas
 process.env.NODE_ENV === "production" && router.use(authMiddleware);
 
-// Obtener serenos disponibles
-router.get("/disponibles", getSerenosDisponibles);
+// Obtener listado de historial
+router.get("/", getHistorial);
 
-// Obtener serenos cercanos a una ubicación
-router.get("/cercanos", getSerenosCercanos);
+// Obtener detalle de un caso específico
+router.get("/:id/caso", getDetalleCaso);
 
 export default router;

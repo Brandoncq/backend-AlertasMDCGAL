@@ -3,10 +3,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
-import authRoutes from "./routes/auth.routes.js";
-import userRoutes from "./routes/users.routes.js";
-import citizenRoutes from "./routes/citizens.routes.js";
-import serenoRoutes from "./routes/serenos.routes.js";
+import alertasRoutes from "./routes/alertas.routes.js";
+import serenosRoutes from "./routes/serenos.routes.js";
+import asignacionesRoutes from "./routes/asignaciones.routes.js";
+import historialRoutes from "./routes/historial.routes.js";
+import adminUsuariosRoutes from "./routes/admin.usuarios.routes.js";
+import adminFormulariosRoutes from "./routes/admin.formularios.routes.js";
 
 dotenv.config();
 
@@ -26,9 +28,12 @@ app.use(cookieParser());
 app.use("/auth", authRoutes);
 
 // 🔒 RUTAS PROTEGIDAS
-app.use("/users", userRoutes);
-app.use("/citizens", citizenRoutes);
-app.use("/serenos", serenoRoutes);
+app.use("/api/alertas", alertasRoutes);
+app.use("/api/serenos", serenosRoutes);
+app.use("/api/asignaciones", asignacionesRoutes);
+app.use("/api/historial", historialRoutes);
+app.use("/api/admin/usuarios", adminUsuariosRoutes);
+app.use("/api/admin/formularios", adminFormulariosRoutes);
 
 const PORT = process.env.PORT || 3000;
 

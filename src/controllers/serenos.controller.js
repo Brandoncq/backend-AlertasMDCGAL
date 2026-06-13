@@ -1,31 +1,39 @@
 import pool from "../config/db.js";
-import bcrypt from "bcrypt";
 
-// Obtener serenos
-export const getSerenos = async (req, res) => {
+// GET /api/serenos/disponibles
+export const getSerenosDisponibles = async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT
-        u.id,
+    const result = await pool.query(
+      `
+      SELECT 
+        u.id as id_usuario,
         u.nombres,
         u.apellidos,
-        u.celular,
-        u.correo,
-        u.rol,
-        u.activo,
         s.estado_disponibilidad,
-        s.tipo_patrullaje,
+        ST_Y(s.ubicacion_actual::geometry) as lat,
+        ST_X(s.ubicacion_actual::geometry) as lng,
         s.ultima_actualizacion_gps
       FROM serenos s
-      INNER JOIN usuarios u
-        ON s.id_usuario = u.id
-    `);
+      JOIN usuarios u ON s.usuario_id = u.id
+      WHERE s.estado_disponibilidad = 'DISPONIBLE'
+        AND u.activo = true
+      ORDER BY u.nombres ASC
+      `,
+    );
 
-    return res.status(200).json({
-      success: true,
-      message: "Serenos obtenidos correctamente",
-      data: result.rows,
-    });
+    const serenos = result.rows.map((row) => ({
+      id_usuario: row.id_usuario,
+      nombres: row.nombres,
+      apellidos: row.apellidos,
+      estado_disponibilidad: row.estado_disponibilidad,
+      ubicacion_actual: {
+        lat: parseFloat(row.lat),
+        lng: parseFloat(row.lng),
+      },
+      ultima_actualizacion_gps: row.ultima_actualizacion_gps,
+    }));
+
+    return res.status(200).json(serenos);
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -35,151 +43,62 @@ export const getSerenos = async (req, res) => {
   }
 };
 
-// Crear sereno
-export const createSereno = async (req, res) => {
-  const client = await pool.connect();
-
+// GET /api/serenos/cercanos
+export const getSerenosCercanos = async (req, res) => {
   try {
-    await client.query("BEGIN");
+    const { lat, lng, limit = 5 } = req.query;
 
-    const { nombres, apellidos, celular, correo, tipo_patrullaje } = req.body;
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        message: "Los parámetros lat y lng son requeridos",
+        data: null,
+      });
+    }
 
-    // Contraseña inicial = celular
-    const passwordHash = await bcrypt.hash(celular, 10);
-
-    // Crear usuario
-    const userResult = await client.query(
+    // Consulta con PostGIS para distancia geográfica (en metros)
+    // NOTA: Para OSRM real, esto debería llamar a un servicio externo
+    const result = await pool.query(
       `
-      INSERT INTO usuarios (
-        nombres,
-        apellidos,
-        celular,
-        correo,
-        rol,
-        password_hash
-      )
-      VALUES ($1,$2,$3,$4,$5,$6)
-      RETURNING id
+      SELECT 
+        u.id as id_usuario,
+        u.nombres,
+        u.apellidos,
+        s.estado_disponibilidad,
+        ST_Y(s.ubicacion_actual::geometry) as lat_sereno,
+        ST_X(s.ubicacion_actual::geometry) as lng_sereno,
+        ST_DistanceSphere(
+          s.ubicacion_actual, 
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)
+        ) as distancia_mts
+      FROM serenos s
+      JOIN usuarios u ON s.usuario_id = u.id
+      WHERE s.estado_disponibilidad = 'DISPONIBLE'
+        AND u.activo = true
+      ORDER BY distancia_mts ASC
+      LIMIT $3
       `,
-      [nombres, apellidos, celular, correo, "SERENO", passwordHash],
+      [lng, lat, limit],
     );
 
-    const idUsuario = userResult.rows[0].id;
+    // Calcular tiempo estimado (asumiendo velocidad promedio 20 km/h = 333 m/min)
+    const serenos = result.rows.map((row) => ({
+      id_usuario: row.id_usuario,
+      nombres: row.nombres,
+      apellidos: row.apellidos,
+      estado_disponibilidad: row.estado_disponibilidad,
+      ubicacion_actual: {
+        lat: parseFloat(row.lat_sereno),
+        lng: parseFloat(row.lng_sereno),
+      },
+      distancia_estimada_mts: Math.round(row.distancia_mts),
+      tiempo_estimado_llegada_min: Math.max(
+        1,
+        Math.round(row.distancia_mts / 333),
+      ),
+    }));
 
-    // Crear sereno
-    await client.query(
-      `
-      INSERT INTO serenos (
-        id_usuario,
-        estado_disponibilidad,
-        tipo_patrullaje
-      )
-      VALUES ($1,$2,$3)
-      `,
-      [idUsuario, "INACTIVO", tipo_patrullaje ?? "INFANTERIA"],
-    );
-
-    await client.query("COMMIT");
-
-    return res.status(201).json({
-      success: true,
-      message: "Sereno creado correctamente",
-      data: null,
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    return res.status(500).json({
-      success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
-      data: null,
-    });
-  } finally {
-    client.release();
-  }
-};
-
-// Actualizar sereno
-export const updateSereno = async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const { id } = req.params;
-
-    const {
-      nombres,
-      apellidos,
-      celular,
-      correo,
-      estado_disponibilidad,
-      tipo_patrullaje,
-    } = req.body;
-
-    await client.query(
-      `
-      UPDATE usuarios
-      SET
-        nombres = $1,
-        apellidos = $2,
-        celular = $3,
-        correo = $4
-      WHERE id = $5
-      `,
-      [nombres, apellidos, celular, correo, id],
-    );
-
-    await client.query(
-      `
-      UPDATE serenos
-      SET
-        estado_disponibilidad = $1,
-        tipo_patrullaje = $2
-      WHERE id_usuario = $3
-      `,
-      [estado_disponibilidad, tipo_patrullaje, id],
-    );
-
-    await client.query("COMMIT");
-
-    return res.status(200).json({
-      success: true,
-      message: "Sereno actualizado correctamente",
-      data: null,
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    return res.status(500).json({
-      success: false,
-      message: `Error: ${error?.message || "Error interno del servidor"}`,
-      data: null,
-    });
-  } finally {
-    client.release();
-  }
-};
-
-// Eliminación lógica
-export const deleteSereno = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query(
-      `
-      UPDATE usuarios
-      SET activo = false
-      WHERE id = $1
-      `,
-      [id],
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Sereno desactivado correctamente",
-      data: null,
-    });
+    return res.status(200).json(serenos);
   } catch (error) {
     return res.status(500).json({
       success: false,
