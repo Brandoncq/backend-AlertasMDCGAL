@@ -6,6 +6,7 @@ import {
   crearAlerta,
   getAlertaActiva,
   calificarAlerta,
+  actualizarEstadoAlerta,
 } from "../controllers/alertas.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 
