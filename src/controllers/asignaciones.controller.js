@@ -60,7 +60,7 @@ export const crearAsignacion = async (req, res) => {
       `
       UPDATE serenos
       SET estado_disponibilidad = 'OCUPADO', ultima_actualizacion_gps = NOW()
-      WHERE usuario_id = $1
+      WHERE id_usuario = $1
       `,
       [sereno_id],
     );
@@ -180,16 +180,11 @@ export const responderAsignacion = async (req, res) => {
 
       // Emitir eventos WebSocket
       try {
-        await pusher.trigger("dashboard-operador", "SERENO_ACEPTO", {
+        await pusher.trigger("private-operador-global", "SERENO_ACEPTO", {
           asignacion_id: parseInt(id),
           alerta_id: asignacion.alerta_id,
           sereno_id,
           estado: "DESPLIEGUE"
-        });
-
-        await pusher.trigger(`private-alerta-${asignacion.alerta_id}`, "ALERTA_ESTADO_CAMBIADO", {
-          alerta_id: asignacion.alerta_id,
-          nuevo_estado: "DESPLIEGUE"
         });
       } catch (wsError) {
         console.error("WS Error:", wsError);
