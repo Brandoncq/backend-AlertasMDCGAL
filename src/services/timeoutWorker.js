@@ -3,7 +3,7 @@ import pusher from "../config/soketi.js";
 
 export const startTimeoutWorker = () => {
   console.log("Iniciando Worker de Timeout (60s) para asignaciones...");
-  
+
   setInterval(async () => {
     try {
       const { rows } = await pool.query(
@@ -17,11 +17,12 @@ export const startTimeoutWorker = () => {
 
       if (rows.length > 0) {
         for (const asignacion of rows) {
+          const client = await pool.connect();
           try {
-            await pool.query("BEGIN");
+            await client.query("BEGIN");
 
             // 1. Marcar asignacion como TIMEOUT
-            await pool.query(
+            await client.query(
               `
               UPDATE asignaciones_sereno 
               SET estado = 'TIMEOUT' 
@@ -31,7 +32,7 @@ export const startTimeoutWorker = () => {
             );
 
             // 2. Regresar alerta a PENDIENTE
-            await pool.query(
+            await client.query(
               `
               UPDATE alertas 
               SET estado_actual = 'PENDIENTE', updated_at = NOW() 
@@ -41,7 +42,7 @@ export const startTimeoutWorker = () => {
             );
 
             // 3. Liberar al sereno (DISPONIBLE)
-            await pool.query(
+            await client.query(
               `
               UPDATE serenos 
               SET estado_disponibilidad = 'DISPONIBLE' 
@@ -50,23 +51,57 @@ export const startTimeoutWorker = () => {
               [asignacion.sereno_id]
             );
 
-            await pool.query("COMMIT");
+            // Obtener todos los datos de la alerta para el front
+            const alertaData = await client.query(
+              `
+              SELECT 
+                id, 
+                ciudadano_id, 
+                estado_actual, 
+                ST_Y(ubicacion_incidencia::geometry) AS lat, 
+                ST_X(ubicacion_incidencia::geometry) AS lng, 
+                direccion_aproximada, 
+                descripcion, 
+                created_at, 
+                updated_at
+              FROM alertas
+              WHERE id = $1
+              `,
+              [asignacion.alerta_id]
+            );
+
+            await client.query("COMMIT");
 
             console.log(`[Worker] Asignación ${asignacion.id} marcada como TIMEOUT.`);
 
+            const alerta = alertaData.rows[0];
+
             // 4. Notificar al dashboard
-            await pusher.trigger("dashboard-operador", "SERENO_TIMEOUT", {
+            await pusher.trigger("private-operador-global", "SERENO_TIMEOUT", {
               asignacion_id: asignacion.id,
               alerta_id: asignacion.alerta_id,
               sereno_id: asignacion.sereno_id,
+              // Enviamos toda la data de la alerta para que el front no se rompa
+              alerta: {
+                id: alerta.id,
+                ciudadano_id: alerta.ciudadano_id,
+                estado_actual: alerta.estado_actual,
+                ubicacion_incidencia: {
+                  lat: parseFloat(alerta.lat),
+                  lng: parseFloat(alerta.lng),
+                },
+                direccion_aproximada: alerta.direccion_aproximada,
+                descripcion: alerta.descripcion,
+                created_at: alerta.created_at,
+                updated_at: alerta.updated_at,
+              }
             });
 
-            // 5. Opcional: avisar a la alerta original por si en el futuro el ciudadano lo necesita ver,
-            // pero el requerimiento solo dice "mostrar toast rojo al operador".
-
           } catch (err) {
-            await pool.query("ROLLBACK");
+            await client.query("ROLLBACK");
             console.error(`[Worker] Error procesando asignación ${asignacion.id}:`, err);
+          } finally {
+            client.release();
           }
         }
       }
