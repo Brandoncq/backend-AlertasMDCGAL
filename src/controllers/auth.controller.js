@@ -197,7 +197,7 @@ export const registerCiudadano = async (req, res) => {
     }
 
     const reniecData = reniecResult.rows[0];
-    
+
     // Comparación básica (se podría hacer más estricta)
     if (
       reniecData.nombres.toLowerCase() !== nombres.toLowerCase() ||
@@ -270,10 +270,10 @@ export const registerCiudadano = async (req, res) => {
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    
+
     // Manejar error de unicidad (correo o celular ya existen)
     if (error.code === '23505') {
-       return res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "El correo, celular o DNI ya se encuentra registrado",
         data: null,

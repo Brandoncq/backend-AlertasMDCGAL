@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   const token =
     req.cookies?.access_token || req.headers.authorization?.split(" ")[1];
 
@@ -11,13 +11,14 @@ export const authMiddleware = (req, res, next) => {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+    const { payload } = await jwtVerify(token, secret);
 
     req.user = payload;
 
     next();
   } catch (error) {
-    console.error("JWT Verify Error:", error.message);
     return res.status(401).json({
       message: "Token inválido",
     });
