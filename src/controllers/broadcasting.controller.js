@@ -14,9 +14,10 @@ export const authenticateSocket = (req, res) => {
     // el ciudadano dueño o el sereno asignado.
     // Por simplicidad en la demo, permitimos si está autenticado.
 
-    const auth = pusher.authenticate(socketId, channelName);
+    const auth = pusher.authorizeChannel(socketId, channelName);
     return res.send(auth);
   } catch (error) {
+    console.error("Pusher Auth Error:", error.message, "SocketId:", req.body.socket_id, "Channel:", req.body.channel_name);
     return res.status(403).json({ message: "No autorizado para este canal." });
   }
 };
