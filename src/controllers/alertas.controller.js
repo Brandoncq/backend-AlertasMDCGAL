@@ -146,10 +146,10 @@ export const getDetalleAlerta = async (req, res) => {
 
       formulario_ciudadano: formulario
         ? {
-            formulario_id: formulario.formulario_id,
-            titulo: formulario.titulo,
-            respuestas: formulario.respuestas_jsonb,
-          }
+          formulario_id: formulario.formulario_id,
+          titulo: formulario.titulo,
+          respuestas: formulario.respuestas_jsonb,
+        }
         : null,
     };
 
@@ -362,10 +362,17 @@ export const crearAlerta = async (req, res) => {
     // 4. Emitir evento Websocket para el Operador
     try {
       await pusher.trigger("dashboard-operador", "ALERTA_CREADA", {
-        alerta_id: nuevaAlerta.id,
-        lat: latitude,
-        lng: longitude,
-        estado: "PENDIENTE",
+        id: nuevaAlerta.id,
+        ciudadano_id: ciudadano_id,
+        estado_actual: nuevaAlerta.estado_actual,
+        ubicacion_incidencia: {
+          lat: parseFloat(latitude),
+          lng: parseFloat(longitude),
+        },
+        direccion_aproximada: "Ubicación GPS",
+        descripcion: descripcion || "Sin descripción",
+        created_at: nuevaAlerta.created_at,
+        updated_at: nuevaAlerta.created_at,
       });
     } catch (wsError) {
       console.error("Error emitiendo WebSocket ALERTA_CREADA:", wsError.message);
@@ -497,7 +504,7 @@ export const calificarAlerta = async (req, res) => {
     // 2. Guardar el feedback como un registro en respuestas_formulario
     // Si ya existe un registro de formulario de calificación, lo actualiza (ON CONFLICT no disponible por defecto sin UNIQUE en alerta_id, formulario_id, usamos INSERT)
     // Asumimos que el ciudadano solo puede enviar un form de calificación (formulario_id = 2)
-    
+
     // Verificamos si ya existe
     const existForm = await client.query(
       "SELECT 1 FROM respuestas_formulario WHERE alerta_id = $1 AND formulario_id = $2",
