@@ -76,8 +76,19 @@ export const crearAsignacion = async (req, res) => {
 
     await client.query("COMMIT");
 
-    // TODO: Emitir WebSocket SERENO_ASIGNADO
-    // io.emit('SERENO_ASIGNADO', { asignacion_id, alerta_id, sereno_id });
+    // Emitir WebSocket para el Sereno usando Pusher
+    try {
+      await pusher.trigger(`private-sereno-${sereno_id}`, "NUEVA_ASIGNACION", {
+        asignacion_id: asignacion_id,
+        alerta_id: alerta_id,
+        sereno_id: sereno_id,
+        tiempo_estimado_llegada_min: tiempo_estimado_llegada_min,
+        distancia_estimada_mts: distancia_estimada_mts,
+        segundos_para_timeout: 60
+      });
+    } catch (wsError) {
+      console.error("WS Error:", wsError);
+    }
 
     return res.status(201).json({
       success: true,
