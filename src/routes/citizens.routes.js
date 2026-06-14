@@ -8,7 +8,7 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-process.env.NODE_ENV === "production" && router.use(authMiddleware);
+router.use(authMiddleware);
 
 // Contactos de emergencia del ciudadano
 router.get("/contactos", getContactos);

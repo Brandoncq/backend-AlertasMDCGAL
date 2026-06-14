@@ -12,7 +12,7 @@ export const crearAsignacion = async (req, res) => {
       distancia_estimada_mts,
       tiempo_estimado_llegada_min,
     } = req.body;
-    const operador_id = req.user?.id || 1; // Temporal, viene del JWT
+    const operador_id = req.user.id;
 
     if (!alerta_id || !sereno_id) {
       return res.status(400).json({
@@ -104,7 +104,7 @@ export const responderAsignacion = async (req, res) => {
   try {
     const { id } = req.params;
     const { accion } = req.body; // "ACEPTAR" o "RECHAZAR_MANUAL"
-    const sereno_id = req.user?.id || 5;
+    const sereno_id = req.user.id;
 
     await client.query("BEGIN");
 

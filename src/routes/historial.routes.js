@@ -8,7 +8,7 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
 // Proteger todas las rutas
-process.env.NODE_ENV === "production" && router.use(authMiddleware);
+router.use(authMiddleware);
 
 // Obtener listado de historial
 router.get("/", getHistorial);

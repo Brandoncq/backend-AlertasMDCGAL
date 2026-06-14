@@ -170,7 +170,7 @@ export const rechazarAlerta = async (req, res) => {
   try {
     const { id } = req.params;
     const { categoria_rechazo, motivo_detalle } = req.body;
-    const operador_id = req.user?.id || 1;
+    const operador_id = req.user.id;
 
     await client.query("BEGIN");
 
@@ -300,7 +300,7 @@ export const rechazarAlerta = async (req, res) => {
 export const crearAlerta = async (req, res) => {
   const client = await pool.connect();
   try {
-    const ciudadano_id = req.user?.id || 14; // Should come from JWT, mock for now if not present
+    const ciudadano_id = req.user.id;
     const {
       latitude,
       longitude,
@@ -395,7 +395,7 @@ export const crearAlerta = async (req, res) => {
 // GET /api/alertas/activa
 export const getAlertaActiva = async (req, res) => {
   try {
-    const ciudadano_id = req.user?.id || 14;
+    const ciudadano_id = req.user.id;
 
     const result = await pool.query(
       `
@@ -479,7 +479,7 @@ export const calificarAlerta = async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const ciudadano_id = req.user?.id || 14;
+    const ciudadano_id = req.user.id;
     const { formulario_id, calificacion_estrellas, respuestas } = req.body;
 
     await client.query("BEGIN");
@@ -552,7 +552,7 @@ export const actualizarEstadoAlerta = async (req, res) => {
   try {
     const { id } = req.params;
     const { nuevo_estado, formulario_id, respuestas_formulario } = req.body;
-    const sereno_id = req.user?.id || 5;
+    const sereno_id = req.user.id;
 
     if (!['INTERVENCION', 'ATENDIDO'].includes(nuevo_estado)) {
       return res.status(400).json({
