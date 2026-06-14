@@ -2,7 +2,7 @@ import { jwtVerify } from "jose";
 
 export const authMiddleware = async (req, res, next) => {
   const token =
-    req.cookies?.access_token || req.headers.authorization?.split(" ")[1];
+    req.headers.authorization?.split(" ")[1] || req.cookies?.access_token;
 
   if (!token) {
     return res.status(401).json({
