@@ -7,7 +7,7 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Proteger todas las rutas
+// Proteger las rutas de admin
 router.use(authMiddleware);
 
 // Obtener todos los formularios (admin)

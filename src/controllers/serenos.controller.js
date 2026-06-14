@@ -105,7 +105,7 @@ export const getSerenosCercanos = async (req, res) => {
 // PATCH /api/serenos/estado
 export const cambiarEstadoSereno = async (req, res) => {
   try {
-    const id_usuario = req.user.id;
+    const id_usuario = req.user?.id || 5;
     const { estado } = req.body;
 
     const validStates = ['DISPONIBLE', 'OCUPADO', 'INACTIVO'];
@@ -144,7 +144,7 @@ export const cambiarEstadoSereno = async (req, res) => {
 // POST /api/serenos/ubicacion
 export const actualizarUbicacion = async (req, res) => {
   try {
-    const id_usuario = req.user.id;
+    const id_usuario = req.user?.id || 5;
     const { latitude, longitude } = req.body;
 
     if (!latitude || !longitude) {

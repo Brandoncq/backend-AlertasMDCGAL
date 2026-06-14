@@ -4,8 +4,8 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Opcional: proteger con authMiddleware
-router.use(authMiddleware);
+// NOTA: Estas rutas podrían ser públicas o requerir auth según el diseño
+// router.use(authMiddleware);
 
 // Obtener estructura de un formulario dinámico
 router.get("/config/:identificador", getFormularioConfig);

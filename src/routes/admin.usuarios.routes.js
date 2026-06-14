@@ -9,7 +9,7 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
 // Proteger todas las rutas
-//router.use(authMiddleware);
+router.use(authMiddleware);
 
 // Obtener todos los usuarios (admin)
 router.get("/", getAdminUsuarios);
