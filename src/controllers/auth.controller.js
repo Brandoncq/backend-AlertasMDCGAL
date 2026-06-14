@@ -67,7 +67,7 @@ export const login = async (req, res) => {
       .status(200)
       .json({
         success: true,
-        message: "Login exitoso",
+        message: "Login web exitoso",
         data: {
           id: user.id,
           nombres: user.nombres,
@@ -78,6 +78,88 @@ export const login = async (req, res) => {
           activo: user.activo,
         },
       });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      data: null,
+    });
+  }
+};
+
+export const loginApp = async (req, res) => {
+  try {
+    const { correo, password } = req.body;
+
+    // Buscar usuario
+    const result = await pool.query(
+      `SELECT id, nombres, apellidos, correo, celular, rol, activo, password_hash
+       FROM usuarios
+       WHERE correo = $1`,
+      [correo],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Credenciales inválidas",
+        data: null,
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Solo permitir Ciudadanos y Serenos
+    if (user.rol !== 'CIUDADANO' && user.rol !== 'SERENO') {
+      return res.status(403).json({
+        success: false,
+        message: "Acceso denegado. Solo para ciudadanos y serenos.",
+        data: null,
+      });
+    }
+
+    if (!user.activo) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario inactivo. Contacte con el administrador.",
+        data: null,
+      });
+    }
+
+    // Validar contraseña
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        message: "Credenciales inválidas",
+        data: null,
+      });
+    }
+
+    // Crear JWT
+    const token = generateToken({
+      id: user.id,
+      rol: user.rol,
+    });
+
+    // Respuesta pura en JSON (sin cookies, ideal para React Native)
+    return res.status(200).json({
+      success: true,
+      message: "Login exitoso",
+      data: {
+        token,
+        usuario: {
+          id: user.id,
+          nombres: user.nombres,
+          apellidos: user.apellidos,
+          correo: user.correo,
+          celular: user.celular,
+          rol: user.rol,
+          activo: user.activo,
+        },
+      },
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
