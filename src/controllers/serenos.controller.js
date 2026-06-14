@@ -101,3 +101,79 @@ export const getSerenosCercanos = async (req, res) => {
     });
   }
 };
+
+// PATCH /api/serenos/estado
+export const cambiarEstadoSereno = async (req, res) => {
+  try {
+    const id_usuario = req.user?.id || 5; // Default for testing if no JWT
+    const { estado } = req.body;
+
+    const validStates = ['DISPONIBLE', 'OCUPADO', 'INACTIVO'];
+    if (!validStates.includes(estado)) {
+      return res.status(400).json({
+        success: false,
+        message: "Estado inválido.",
+      });
+    }
+
+    await pool.query(
+      `
+      UPDATE serenos
+      SET estado_disponibilidad = $1
+      WHERE id_usuario = $2
+      `,
+      [estado, id_usuario]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Estado de disponibilidad actualizado",
+      data: {
+        nuevo_estado: estado,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error interno del servidor: ${error.message}`,
+      data: null,
+    });
+  }
+};
+
+// POST /api/serenos/ubicacion
+export const actualizarUbicacion = async (req, res) => {
+  try {
+    const id_usuario = req.user?.id || 5;
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitud y longitud son requeridas.",
+      });
+    }
+
+    await pool.query(
+      `
+      UPDATE serenos
+      SET ubicacion_actual = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+          ultima_actualizacion_gps = NOW()
+      WHERE id_usuario = $3
+      `,
+      [longitude, latitude, id_usuario]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Ubicación espacial persistida.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error interno del servidor: ${error.message}`,
+      data: null,
+    });
+  }
+};
+

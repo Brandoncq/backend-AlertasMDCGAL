@@ -206,3 +206,84 @@ export const deleteCitizen = async (req, res) => {
     });
   }
 };
+
+// Contactos de emergencia
+export const getContactos = async (req, res) => {
+  try {
+    const ciudadano_id = req.user?.id || 14;
+
+    const result = await pool.query(
+      `
+      SELECT id, nombre_referencia as nombre, celular, tipo_relacion as parentesco
+      FROM contactos_referencia
+      WHERE ciudadano_id = $1
+      `,
+      [ciudadano_id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      data: null,
+    });
+  }
+};
+
+export const agregarContacto = async (req, res) => {
+  try {
+    const ciudadano_id = req.user?.id || 14;
+    const { nombre, celular, parentesco } = req.body;
+
+    const result = await pool.query(
+      `
+      INSERT INTO contactos_referencia (ciudadano_id, nombre_referencia, celular, tipo_relacion)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, nombre_referencia as nombre, celular, tipo_relacion as parentesco
+      `,
+      [ciudadano_id, nombre, celular, parentesco]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Familiar añadido a sus contactos de emergencia.",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      data: null,
+    });
+  }
+};
+
+export const eliminarContacto = async (req, res) => {
+  try {
+    const ciudadano_id = req.user?.id || 14;
+    const { id } = req.params;
+
+    await pool.query(
+      `
+      DELETE FROM contactos_referencia
+      WHERE id = $1 AND ciudadano_id = $2
+      `,
+      [id, ciudadano_id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Contacto eliminado correctamente.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: `Error: ${error?.message || "Error interno del servidor"}`,
+      data: null,
+    });
+  }
+};

@@ -86,3 +86,124 @@ export const login = async (req, res) => {
     });
   }
 };
+
+export const registerCiudadano = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const {
+      dni,
+      fecha_vencimiento_dni,
+      nombres,
+      apellidos,
+      celular,
+      correo,
+      password,
+    } = req.body;
+
+    // 1. Validar contra mock_reniec
+    const reniecResult = await client.query(
+      "SELECT * FROM mock_reniec WHERE dni = $1",
+      [dni]
+    );
+
+    if (reniecResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "DNI no encontrado en los registros de RENIEC",
+        data: null,
+      });
+    }
+
+    const reniecData = reniecResult.rows[0];
+    
+    // Comparación básica (se podría hacer más estricta)
+    if (
+      reniecData.nombres.toLowerCase() !== nombres.toLowerCase() ||
+      reniecData.apellidos.toLowerCase() !== apellidos.toLowerCase()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Los nombres o apellidos no coinciden con RENIEC",
+        data: null,
+      });
+    }
+
+    await client.query("BEGIN");
+
+    // 2. Hashear password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // 3. Insertar en usuarios
+    const userResult = await client.query(
+      `
+      INSERT INTO usuarios (
+        nombres,
+        apellidos,
+        celular,
+        correo,
+        rol,
+        password_hash
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, nombres, apellidos, rol
+      `,
+      [nombres, apellidos, celular, correo, "CIUDADANO", passwordHash]
+    );
+
+    const newUser = userResult.rows[0];
+
+    // 4. Insertar en ciudadanos
+    await client.query(
+      `
+      INSERT INTO ciudadanos (
+        id_usuario,
+        dni,
+        fecha_vencimiento_dni
+      )
+      VALUES ($1, $2, $3)
+      `,
+      [newUser.id, dni, fecha_vencimiento_dni]
+    );
+
+    await client.query("COMMIT");
+
+    // 5. Generar Token
+    const token = generateToken({
+      id: newUser.id,
+      rol: newUser.rol,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Usuario registrado y verificado con éxito",
+      data: {
+        token,
+        usuario: {
+          id: newUser.id,
+          nombres: newUser.nombres,
+          apellidos: newUser.apellidos,
+          rol: newUser.rol,
+        },
+      },
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    
+    // Manejar error de unicidad (correo o celular ya existen)
+    if (error.code === '23505') {
+       return res.status(400).json({
+        success: false,
+        message: "El correo, celular o DNI ya se encuentra registrado",
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: `Error interno del servidor: ${error.message}`,
+      data: null,
+    });
+  } finally {
+    client.release();
+  }
+};
